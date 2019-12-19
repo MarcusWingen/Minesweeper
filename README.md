@@ -1,2 +1,2 @@
 # Minesweeper
-Implementation of the classic game in Python
+Implementation of the classic game in Python (v3.7)
