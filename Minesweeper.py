@@ -2,7 +2,6 @@ import pygame as pg
 from datetime import datetime
 import random as rnd
 
-
 # Game settings:
 Num_Mines = 10
 Columns = 10
@@ -10,7 +9,7 @@ Rows = 10
 # -----------------------------
 
 # Display settings
-Info_Height = 40  # Height of info area displaying number of mines and time
+Info_Height = 40  # area displaying number of mines and time
 Tile_size = 30
 Width = Columns * Tile_size
 Height = Rows * Tile_size + Info_Height
@@ -41,7 +40,7 @@ Game_Won = False
 Game_Over = False
 Final_Filled = False
 Score_Saved = False
-Player_Name = "Player"
+Player_Name = "Player"  # currently not used
 Tile_list = pg.sprite.Group()
 
 Date_Time = datetime.now()
@@ -61,7 +60,8 @@ class Tile(pg.sprite.Sprite):
 
     def __init__(self, x, y, pic_id, size=Tile_size):
         super().__init__()  # Call the parent class (Sprite) constructor
-        self.image = pg.transform.scale(pg.image.load(f"./tiles/MS_{pic_id}.png"), (size, size))
+        self.image = pg.transform.scale(
+            pg.image.load(f"./tiles/MS_{pic_id}.png"), (size, size))
 
         # Fetch the rectangle object that has the dimensions of the image.
         self.rect = self.image.get_rect()
@@ -69,40 +69,42 @@ class Tile(pg.sprite.Sprite):
         self.rect.y = y
 
 
-def next_to_field(index1, index2):
+def next_to_field(ind1, ind2):
     """Check if the position of index1 is next to index2 on the game filed."""
     # x,y pos of fields in question:
-    index1_x = (index1 % Columns) * Tile_size
-    index1_y = (index1 // Columns) * Tile_size
-    index2_x = (index2 % Columns) * Tile_size
-    index2_y = (index2 // Columns) * Tile_size
+    ind1_x = (ind1 % Columns) * Tile_size
+    ind1_y = (ind1 // Columns) * Tile_size
+    ind2_x = (ind2 % Columns) * Tile_size
+    ind2_y = (ind2 // Columns) * Tile_size
 
-    if index2_x in range(index1_x - Tile_size, index1_x + Tile_size + 1) and \
-            index2_y in range(index1_y - Tile_size, index1_y + Tile_size + 1):
+    if ind2_x in range(ind1_x - Tile_size, ind1_x + Tile_size + 1) \
+            and ind2_y in range(ind1_y - Tile_size, ind1_y + Tile_size + 1):
         return True
     else:
         return False
 
 
 def create_field():
-    """place mines in the field list"""
+    """place mines in the field list."""
     field = [Empty_ID for n in range(Columns * Rows)]
 
     # randomly place mines:
     while sum(field) < Num_Mines * Mine_ID:
         field[rnd.randrange(len(field))] = Mine_ID
 
-    # Define all possible positions of neighbouring fields relative to one field, 8 in total:
-    neighbour_fields = [-Columns - 1, -Columns, -Columns + 1, -1, 1, Columns - 1, Columns, Columns + 1]
+    # Define all possible positions of neighbouring fields
+    # relative to one field, 8 in total:
+    neighbour_fields = [-Columns - 1, -Columns, -Columns + 1, -1, 1,
+                        Columns - 1, Columns, Columns + 1]
 
     # place numbers next to mines as hints for the player:
     for m in range(len(field)):
         for n in neighbour_fields:
-            if field[m] == Mine_ID:  # if there is a mine at this position
-                if m + n in range(len(field)):  # i.e. m + 1, m - 1, m + 10 etc. is a valid list index
-                    if next_to_field(m, m + n):  # if m+n is next to m in terms of x,y coordinates
-                        if field[m + n] != Mine_ID:  # if field next to m does not contain a mine itself
-                            field[m + n] += 1  # set value +1 -> mine-marker, adds up for multiple mines
+            if field[m] == Mine_ID \
+                    and m + n in range(len(field)) \
+                    and next_to_field(m, m + n) \
+                    and field[m + n] != Mine_ID:
+                field[m + n] += 1  # mine-marker, adds up for multiple mines
     return field
 
 
@@ -112,34 +114,42 @@ def clear_tile(cover_list, field_list):
     Continues as long as new fields are uncovered,
     i.e. the checksum decreases.
     """
-    # list of checksums, starting with highest possible value, followed by current value:
+    # list of checksums, starting with highest possible value,
+    # followed by current value:
     checksums = [Columns * Rows * 12, sum(Cover)]
-    iterations = 1  # keep track of how many times the loop has been performed
-    cleared_fields = []  # Store all indices of uncovered fields, used to draw the tiles
-    # Define all possible positions of neighbouring fields relative to one field, 8 in total:
-    neighbour_fields = [-Columns - 1, -Columns, -Columns + 1, -1, 1, Columns - 1, Columns, Columns + 1]
+    iterations = 1
+    cleared_fields = []  # Store indices of cleared fields, used to draw tiles
+    # Define all possible positions of neighbouring fields
+    # relative to one field, 8 in total:
+    neighbour_fields = [-Columns - 1, -Columns, -Columns + 1, -1, 1,
+                        Columns - 1, Columns, Columns + 1]
 
-    while checksums[iterations] < checksums[iterations - 1]:  # while number of uncovered tiles increases
+    # while number of uncovered tiles increases iterate over the cover_list
+    # and fields next to it.
+    # if it is empty or not a mine add it to list of clear fields
+    while checksums[iterations] < checksums[iterations - 1]:
         for i in range(len(cover_list)):
             for n in neighbour_fields:
-                if cover_list[i] == Empty_ID:
-                    if i + n in range(len(cover_list)):
-                        if next_to_field(i, i + n):
-                            if i + n not in cleared_fields and cover_list[i + n] > Mine_ID:
-                                cleared_fields.append(i + n)  # store it to show it later
-                            cover_list[i + n] = field_list[i + n]
+                if cover_list[i] == Empty_ID \
+                        and i + n in range(len(cover_list)) \
+                        and next_to_field(i, i + n):
+                    if i + n not in cleared_fields \
+                            and cover_list[i + n] > Mine_ID:
+                        cleared_fields.append(i + n)
+                    cover_list[i + n] = field_list[i + n]
 
         # Go through list in reverse order, too. This way tiles at low index
-        # positions will be uncovered in less iterations, if the first tile is
-        # at at higher index position.
+        # positions will be uncovered in less iterations, if the first tile
+        # is at at higher index position.
         for i in reversed(range(len(cover_list))):
             for n in neighbour_fields:
-                if cover_list[i] == Empty_ID:
-                    if i + n in range(len(cover_list)):
-                        if next_to_field(i, i + n):
-                            if i + n not in cleared_fields and cover_list[i + n] > Mine_ID:
-                                cleared_fields.append(i + n)
-                            cover_list[i + n] = field_list[i + n]
+                if cover_list[i] == Empty_ID \
+                        and i + n in range(len(cover_list)) \
+                        and next_to_field(i, i + n):
+                    if i + n not in cleared_fields \
+                            and cover_list[i + n] > Mine_ID:
+                        cleared_fields.append(i + n)
+                    cover_list[i + n] = field_list[i + n]
 
         # For each iteration append the sum of the Cover tiles to check
         # if more tiles are uncovered.
@@ -174,7 +184,7 @@ def fill_screen(list1, list2=None):
                     n_y = (n // Columns) * Tile_size + Info_Height
                     new_tile = Tile(n_x, n_y, list2[n])
                     Tile_list.add(new_tile)
-            if list2[n] == Flag_ID and list1[n] != Mine_ID:  # remove false flags
+            if list2[n] == Flag_ID and list1[n] != Mine_ID:  # is false flag
                 n_x = (n % Columns) * Tile_size
                 n_y = (n // Columns) * Tile_size + Info_Height
                 new_tile = Tile(n_x, n_y, False_Flag)  # mark false flag
@@ -191,7 +201,7 @@ def fill_screen(list1, list2=None):
 
 # Num of list pos with val ==11 - marked as mines
 def count_mines(cover_list):
-    """Count how many fields in the cover_list are flagged as mines"""
+    """Count how many fields in the cover_list are flagged as mines."""
     count = Num_Mines
     for i in range(len(cover_list)):
         if cover_list[i] == Flag_ID:
@@ -200,7 +210,9 @@ def count_mines(cover_list):
 
 
 def timer(curr_time):
-    """calc timedelta from start of game and return the total seconds as int"""
+    """Calculate timedelta from start of game and return
+    the total number of seconds as int.
+    """
     game_time = curr_time - Start_Time
     return int(game_time.total_seconds())
 
@@ -225,11 +237,14 @@ while Go:
 
     # Display mine counter and timer in top row:
     if not Game_Over:
-        screen.fill((0, 0, 0), (0, 0, Width, Info_Height))  # Fill screen black at x,y = 0; width, height to update text
-        textsurface = pg.font.SysFont("Arial", 30).render("Mines: " + str(count_mines(Cover)), False, (255, 255, 255))
-        screen.blit(textsurface, ((Width // 2 - textsurface.get_width() // 2) - 80, 0))
-        textsurface = pg.font.SysFont("Arial", 30).render("T[s]: " + str(timer(datetime.now())), False, (255, 255, 255))
-        screen.blit(textsurface, ((Width // 2 - textsurface.get_width() // 2) + 80, 0))
+        # Fill screen black at x,y = 0; width, height to update text
+        screen.fill((0, 0, 0), (0, 0, Width, Info_Height))
+        text = pg.font.SysFont("Arial", 30).render(
+            "Mines: " + str(count_mines(Cover)), False, (255, 255, 255))
+        screen.blit(text, ((Width // 2 - text.get_width() // 2) - 80, 0))
+        text = pg.font.SysFont("Arial", 30).render(
+            "T[s]: " + str(timer(datetime.now())), False, (255, 255, 255))
+        screen.blit(text, ((Width // 2 - text.get_width() // 2) + 80, 0))
 
     # Drawing the Field/Cover on screen:
     while not Screen_Filled and not Game_Over:
@@ -245,46 +260,79 @@ while Go:
             Go = False
 
         if event.type == pg.MOUSEBUTTONDOWN:
-            if event.button == 1:  # 1=left click, 2=middle, 3=right 4=scroll up 5=scroll down
+            if event.button == 1:  # 1=left click, 2=middle, 3=right
                 pos = pg.mouse.get_pos()  # get x,y of mouse
-                if pos[1] > Info_Height:  # if click is below the Info row; [1] = y pos
-                    xpart = pos[0] // Tile_size  # calculate index from mouse x and y
+                if pos[1] > Info_Height:  # below the Info row, [1] = y pos
+
+                    # calculate index from mouse x and y:
+                    xpart = pos[0] // Tile_size
                     ypart = (pos[1] - Info_Height) // Tile_size
-                    index = xpart + (Columns * ypart)
-                    Cover[index] = Field[index]  # to uncover a Tile
-                    new_field = Tile(xpart * Tile_size, ypart * Tile_size + Info_Height, Cover[index])
+                    ind = xpart + (Columns * ypart)
+
+                    Cover[ind] = Field[ind]  # uncover a tile
+                    new_field = Tile(xpart * Tile_size,
+                                     ypart * Tile_size + Info_Height,
+                                     Cover[ind])
                     Tile_list.add(new_field)
                     Tile_list.draw(screen)
-                    if Cover[index] == Empty_ID:
-                        clear_tile(Cover, Field)  # if tile is empty show surrounding ones
-                    if Cover[index] == Mine_ID:  # Hit a Mine
-                        Cover[index] = Explosion_ID
-                        Game_Lost = True  # after Mine is drawn Game Over
+
+                    # if uncovered tile is empty, show surrounding ones:
+                    if Cover[ind] == Empty_ID:
+                        clear_tile(Cover, Field)
+
+                    # if a Mine is hit:
+                    if Cover[ind] == Mine_ID:
+                        Cover[ind] = Explosion_ID
+                        Game_Lost = True
 
         if event.type == pg.MOUSEBUTTONDOWN:
-            if event.button == 3:  # 3 = right click
+            if event.button == 3:
                 pos_r = pg.mouse.get_pos()
                 if pos_r[1] > Info_Height:
-                    tile_reset = False
+                    tile_reset = False  # used for 'de-flagging' mines
                     xpart_r = pos_r[0] // Tile_size
                     ypart_r = (pos_r[1] - Info_Height) // Tile_size
-                    index_r = xpart_r + (Columns * ypart_r)
-                    if Cover[index_r] == Question_mark_ID:  # reset from '?' to empty tile
-                        Cover[index_r] = Cover_ID
+                    ind_r = xpart_r + (Columns * ypart_r)
+
+                    # reset from '?' to empty tile:
+                    if Cover[ind_r] == Question_mark_ID:
+                        Cover[ind_r] = Cover_ID
                         tile_reset = True
-                    if Cover[index_r] == Flag_ID:  # go from flag to '?'
-                        Cover[index_r] = Question_mark_ID
-                        if Field[index_r] == Mine_ID:  # mine un-flagged -> mine counter - 1
-                            Mines_Found -= 1
-                    if Cover[index_r] == Cover_ID and not tile_reset:
-                        Cover[index_r] = Flag_ID  # Picture marking a mine
-                    if Field[index_r] == Mine_ID and Cover[index_r] == Flag_ID:  # correctly located a mine
+
+                    # go from flag to '?':
+                    if Cover[ind_r] == Flag_ID:
+                        Cover[ind_r] = Question_mark_ID
+                        if Field[ind_r] == Mine_ID:
+                            Mines_Found -= 1  # de-flagged -> counter - 1
+
+                    if Cover[ind_r] == Cover_ID and not tile_reset:
+                        Cover[ind_r] = Flag_ID
+                    if Field[ind_r] == Mine_ID and Cover[ind_r] == Flag_ID:
                         Mines_Found += 1
-                    new_field = Tile(xpart_r * Tile_size, ypart_r * Tile_size + Info_Height, Cover[index_r])
+                    new_field = Tile(xpart_r * Tile_size,
+                                     ypart_r * Tile_size + Info_Height,
+                                     Cover[ind_r])
                     Tile_list.add(new_field)
                     Tile_list.draw(screen)
 
-    if Mines_Found == Num_Mines and Cover_ID not in Cover:  # all mines marked an no cover tile left
+    # if a mine is hit: Game lost
+    if Game_Lost:
+        Game_Over = True
+        if not Final_Filled:
+            # Fill screen again, but this time include the Filed list
+            # to reveal everything:
+            fill_screen(Field, Cover)
+            Final_Filled = True
+
+        # Display Game Over message:
+        text = pg.font.SysFont("Arial", 30).render(
+            "You loose!", False, (255, 255, 255), (0, 0, 0))
+        screen.blit(text, ((Width // 2 - text.get_width() // 2),
+                           Height - 2 * Tile_size))
+
+    # If all mines are marked an no cover tile is left: Game won
+    if Mines_Found == Num_Mines and Cover_ID not in Cover:
+        Game_Over = True
         Game_Won = True
         if not End_time_saved:
             End_time = datetime.now()
@@ -294,55 +342,59 @@ while Go:
         Completion_Time = End_time - Start_Time
         Completion_Time_out = int(Completion_Time.total_seconds())
 
-    # Display Game Over message:
-    if Game_Lost:
-        Game_Over = True
-        if not Final_Filled:
-            fill_screen(Field, Cover)  # Fill screen again, but this time include the Filed list to reveal everything
-            Final_Filled = True
-        textsurface = pg.font.SysFont("Arial", 30).render("You loose!", False, (255, 255, 255), (0, 0, 0))
-        screen.blit(textsurface, ((Width // 2 - textsurface.get_width() // 2), Height - 2 * Tile_size))
-
     if Game_Won:
-        Game_Over = True
-        textsurface = pg.font.SysFont("Arial", 30).render("You win!", False, (255, 255, 255), (0, 0, 0))
-        screen.blit(textsurface, ((Width // 2 - textsurface.get_width() // 2), Height - 2 * Tile_size))
+        # Display Game Over message:
+        text = pg.font.SysFont("Arial", 30).render(
+            "You win!", False, (255, 255, 255), (0, 0, 0))
+        screen.blit(text, ((Width // 2 - text.get_width() // 2),
+                           Height - 2 * Tile_size))
         pg.display.flip()
 
-        # Save score:
+        # Save score/time to file and load scores to display them:
         Highscore = []
         Printed_scores = 0
         if not Score_Saved:
-            with open("MS Highscore.txt", "a") as Score_File:
-                Score_File.write(Date_Time_out + ", " + Player_Name + ", " + str(Completion_Time_out) + "\n")
+            with open("MS Highscore.txt", "a") as score_file:
+                score_file.write(f"{Date_Time_out},"
+                                 f" {Player_Name},"
+                                 f" {Completion_Time_out}"
+                                 f"\n")
                 Score_Saved = True
-            with open("MS Highscore.txt", "r") as Score_File:
-                for score in Score_File:
-                    d = score.split(", ")[0]  # split the string to get Date, Name and Completion_Time seperated
-                    n = score.split(", ")[1]
-                    s = score.split(", ")[2]
-                    s1 = int(s.strip())
-                    Highscore.append((d, n, s1))
-                    Highscore.sort(key=lambda tup: tup[2])
+            with open("MS Highscore.txt", "r") as score_file:
+                for score in score_file:
+                    # split string to get tuple: (date, name, time)
+                    d = score.split(", ")[0]
+                    n = score.split(", ")[1]  # currently not used
+                    t = score.split(", ")[2]
+                    t1 = int(t.strip())  # remove linebreak
+                    Highscore.append((d, n, t1))
+                    Highscore.sort(key=lambda tup: tup[2])  # sort by time
 
-        # Display Highscore in black on white background:
-        textsurface = pg.font.SysFont("Arial", 30).render("Date", False, (0, 0, 0), (255, 255, 255))
-        screen.blit(textsurface, ((Width // 2 - textsurface.get_width() // 2) - 80, Info_Height + 10))
-        textsurface = pg.font.SysFont("Arial", 30).render("Time [s]", False, (0, 0, 0), (255, 255, 255))
-        screen.blit(textsurface, ((Width // 2 - textsurface.get_width() // 2) + 80, Info_Height + 10))
+        # Display Heading for Highscore:
+        left_col_x = Width // 2 - 80
+        right_col_y = Width // 2 + 80
+        y_pos = Info_Height + 10
+        text = pg.font.SysFont("Arial", 30).render(
+            "Date", False, (0, 0, 0), (255, 255, 255))
+        screen.blit(text, ((left_col_x - text.get_width() // 2), y_pos))
+        text = pg.font.SysFont("Arial", 30).render(
+            "Time [s]", False, (0, 0, 0), (255, 255, 255))
+        screen.blit(text, ((right_col_y - text.get_width() // 2), y_pos))
+        y_pos += 50
 
-        y_pos = 50  # pos increment for displaying Highscore
         for n in range(len(Highscore)):
-            if Printed_scores < len(Highscore):
-                if Printed_scores < Rows // 2:
-                    textsurface = pg.font.SysFont("Arial", 25).render(str(Highscore[n][0]), False, (0, 0, 0),
-                                                                         (255, 255, 255))
-                    screen.blit(textsurface, ((Width // 2 - textsurface.get_width() // 2) - 80, Info_Height + y_pos))
-                    textsurface = pg.font.SysFont("Arial", 25).render(str(Highscore[n][2]), False, (0, 0, 0),
-                                                                         (255, 255, 255))
-                    screen.blit(textsurface, ((Width // 2 - textsurface.get_width() // 2) + 90, Info_Height + y_pos))
-                    y_pos += 40
-                    Printed_scores += 1
+            if Printed_scores < len(Highscore) \
+                    and Printed_scores < Rows // 2:
+                text = pg.font.SysFont("Arial", 25).render(
+                    str(Highscore[n][0]), False, (0, 0, 0), (255, 255, 255))
+                screen.blit(text,
+                            ((left_col_x - text.get_width() // 2), y_pos))
+                text = pg.font.SysFont("Arial", 25).render(
+                    str(Highscore[n][2]), False, (0, 0, 0), (255, 255, 255))
+                screen.blit(text,
+                            ((right_col_y - text.get_width() // 2), y_pos))
+                y_pos += 40
+                Printed_scores += 1
 
     pg.display.flip()
 
